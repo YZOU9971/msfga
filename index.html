@@ -4,13 +4,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Excel 双网格磁吸贴</title>
+<title>Excel 磁吸贴排布</title>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
 :root {
-  --chip-w:90px;
-  --chip-h:54px;
-  --gap:6px;
+  --chip-w:112px;
+  --chip-h:68px;
+  --gap:8px;
 }
 * { box-sizing:border-box; }
 body {
@@ -22,7 +22,7 @@ body {
 }
 h1 { font-size:20px;margin:0 0 16px; }
 h2 { font-size:15px;margin:0 0 10px; }
-h3 { font-size:14px;margin:0 0 10px; }
+h3 { font-size:15px;margin:0 0 10px; }
 .upload {
   display:block;
   background:white;
@@ -61,22 +61,22 @@ select,button {
   background:white;
   border:1px solid #ddd;
   border-radius:9px;
-  padding:10px;
+  padding:12px;
 }
 
-/* 上方扁平单元格池 */
+/* 上方单元格池 */
 .pool-section { margin-bottom:20px; }
 .pool {
   display:flex;
   flex-wrap:wrap;
   align-content:flex-start;
   gap:var(--gap);
-  min-height:68px;
-  max-height:190px;
+  min-height:90px;
+  max-height:220px;
   overflow-y:auto;
 }
 
-/* 下方双网格横向并排 */
+/* 三个网格并排 */
 .grids-scroll {
   width:100%;
   overflow-x:auto;
@@ -93,7 +93,7 @@ select,button {
 .grid {
   display:grid;
   grid-template-columns:repeat(5,var(--chip-w));
-  grid-template-rows:repeat(6,var(--chip-h));
+  grid-auto-rows:var(--chip-h);
   gap:var(--gap);
 }
 .slot {
@@ -105,14 +105,14 @@ select,button {
   border:1px dashed #ccc;
   border-radius:6px;
   color:#aaa;
-  font-size:11px;
+  font-size:12px;
   overflow:hidden;
 }
 .slot.occupied {
   border:1px solid #4a90d9;
 }
 
-/* 所有磁吸贴尺寸完全一致 */
+/* 统一磁吸贴尺寸 */
 .chip {
   width:var(--chip-w);
   height:var(--chip-h);
@@ -124,14 +124,14 @@ select,button {
   display:flex;
   align-items:center;
   justify-content:center;
-  padding:4px 5px;
+  padding:6px;
   border:1px solid rgba(0,0,0,.15);
   border-radius:6px;
   background:#e8f0fe;
   color:#1a3a6e;
-  font-size:11px;
+  font-size:12px;
   font-weight:600;
-  line-height:1.2;
+  line-height:1.3;
   text-align:center;
   white-space:pre-wrap;
   overflow-wrap:anywhere;
@@ -189,14 +189,14 @@ th { background:#e0e7f5; }
   body { padding:12px; }
   h1 { font-size:18px; }
   .grids-row { gap:14px; }
-  .pool { max-height:175px; }
+  .pool { max-height:200px; }
   .surface { padding:8px; }
 }
 </style>
 </head>
 <body>
 
-<h1>Excel 单元格 → 双 5×6 磁吸贴</h1>
+<h1>Excel 单元格磁吸贴排布</h1>
 
 <label class="upload">
   点击从「文件」中选择 Excel
@@ -217,29 +217,41 @@ th { background:#e0e7f5; }
 <section class="pool-section">
   <h2>未放置单元格 <span id="poolCount"></span></h2>
   <div id="pool" class="surface pool"></div>
-  <div class="hint">按住磁吸贴拖入下方网格，也可拖回这里。</div>
+  <div class="hint">
+    按住磁吸贴拖入下方网格，也可拖回单元格池。
+  </div>
 </section>
 
 <section>
-  <h2>目标网格（共 60 格）</h2>
+  <h2>目标网格（共 80 格）</h2>
   <div class="grids-scroll">
     <div class="grids-row">
+
       <div class="grid-block">
-        <h3>网格一 · 5 × 6</h3>
+        <h3>1团 · 5 × 6</h3>
         <div class="surface">
           <div id="grid1" class="grid"></div>
         </div>
       </div>
+
       <div class="grid-block">
-        <h3>网格二 · 5 × 6</h3>
+        <h3>2团 · 5 × 6</h3>
         <div class="surface">
           <div id="grid2" class="grid"></div>
         </div>
       </div>
+
+      <div class="grid-block">
+        <h3>替补 · 5 × 4</h3>
+        <div class="surface">
+          <div id="grid3" class="grid"></div>
+        </div>
+      </div>
+
     </div>
   </div>
   <div class="hint">
-    两个网格可相互交换。手机端可横向滚动查看。
+    三个网格可相互交换磁吸贴。手机端可横向滚动查看。
   </div>
 </section>
 
@@ -260,17 +272,19 @@ let sheetPaths={};
 let sharedStrings=[];
 let csvRows=null;
 let poolData=[];
-let gridData=Array(60).fill(null);
+let gridData=Array(80).fill(null);
 let currentSheet="";
 let pointer=null;
 
-// 初始化两个网格
-for(let i=0;i<60;i++){
+// 初始化 1团30格、2团30格、替补20格
+for(let i=0;i<80;i++){
   const slot=document.createElement("div");
   slot.className="slot";
   slot.dataset.index=i;
   slot.textContent="空";
-  $(i<30?"grid1":"grid2").append(slot);
+
+  const target=i<30?"grid1":i<60?"grid2":"grid3";
+  $(target).append(slot);
 }
 
 const child=(el,name)=>el
@@ -305,7 +319,6 @@ function resolvePath(base,target){
   );
 }
 
-// Excel 标准索引颜色
 const indexedColors=[
 "000000","FFFFFF","FF0000","00FF00","0000FF","FFFF00",
 "FF00FF","00FFFF","000000","FFFFFF","FF0000","00FF00",
@@ -535,7 +548,7 @@ async function loadSheet(name){
     data=csvRows.map((row,r)=>
       row.map((value,c)=>({
         addr:`R${r+1}C${c+1}`,
-        value:String(value),
+        value:String(value).replace(/\r\n?/g,"\n"),
         style:{}
       }))
     );
@@ -556,6 +569,7 @@ async function loadSheet(name){
 
     for(const row of rows){
       const out=[];
+      const rowNumber=Number(row.getAttribute("r"))||data.length+1;
 
       for(const c of children(row,"c")){
         const addr=c.getAttribute("r")||"";
@@ -587,20 +601,33 @@ async function loadSheet(name){
           style:styleFor(c.getAttribute("s"))
         };
       }
-      data.push(out);
+
+      // 保留实际 Excel 行号，避免空行影响表头判断
+      data[rowNumber-1]=out;
     }
   }
 
-  const items=[],preview=[];
+  const items=[];
+  const preview=[];
   let fontCount=0,fillCount=0;
 
-  data.forEach((row,r)=>{
-    const values=[];
+  // 原始表格预览仍保持行优先
+  data.forEach(row=>{
+    preview.push((row||[]).map(obj=>obj?.value||""));
+  });
 
-    row.forEach((obj,c)=>{
-      values[c]=obj?.value||"";
+  // 磁吸贴改为列优先读取：
+  // A2,A3,A4... 然后 B2,B3,B4...
+  const maxCols=Math.max(
+    0,...data.map(row=>(row||[]).length)
+  );
 
-      if(r===0||!obj||!obj.value.trim())return;
+  for(let c=0;c<maxCols;c++){
+    for(let r=1;r<data.length;r++){
+      const obj=data[r]?.[c];
+
+      // 第一行作为表头，空白单元格跳过
+      if(!obj||!obj.value.trim())continue;
 
       if(obj.style.color)fontCount++;
       if(obj.style.bg)fillCount++;
@@ -610,20 +637,18 @@ async function loadSheet(name){
         text:obj.value,
         style:obj.style
       });
-    });
-
-    preview.push(values);
-  });
+    }
+  }
 
   poolData=items;
-  gridData=Array(60).fill(null);
+  gridData=Array(80).fill(null);
 
   render();
   renderPreview(preview);
 
   $("status").classList.remove("error");
   $("status").textContent=
-    `工作表：${name}｜有效单元格：${items.length}｜字体颜色：${fontCount}｜填充颜色：${fillCount}`;
+    `工作表：${name}｜有效单元格：${items.length}｜字体颜色：${fontCount}｜填充颜色：${fillCount}｜读取顺序：按列从上到下`;
 }
 
 function createChip(item,where,index){
@@ -649,7 +674,7 @@ function render(){
   );
 
   const slots=document.querySelectorAll(
-    "#grid1 .slot,#grid2 .slot"
+    "#grid1 .slot,#grid2 .slot,#grid3 .slot"
   );
 
   slots.forEach((slot,i)=>{
@@ -692,7 +717,7 @@ function renderPreview(rows){
   $("preview").replaceChildren(table);
 }
 
-// 统一移动与交换
+// 统一移动、替换与交换
 function moveItem(from,to){
   if(!from||!to)return;
 
@@ -727,7 +752,7 @@ function moveItem(from,to){
   render();
 }
 
-// iOS 与桌面触屏拖放
+// iOS 与桌面统一触屏拖动
 function targetAt(x,y){
   const el=document.elementFromPoint(x,y);
   if(!el)return null;
@@ -758,7 +783,7 @@ function clearHover(){
 document.addEventListener("pointerdown",e=>{
   const el=e.target.closest(".chip");
 
-  if(!el||!el.closest("#grid1,#grid2,#pool"))
+  if(!el||!el.closest("#grid1,#grid2,#grid3,#pool"))
     return;
 
   if(e.pointerType==="mouse"&&e.button!==0)
